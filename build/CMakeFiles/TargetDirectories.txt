@@ -1,0 +1,7 @@
+/home/hzy/geant4_workdir/Rn_s/build/CMakeFiles/install/strip.dir
+/home/hzy/geant4_workdir/Rn_s/build/CMakeFiles/install/local.dir
+/home/hzy/geant4_workdir/Rn_s/build/CMakeFiles/install.dir
+/home/hzy/geant4_workdir/Rn_s/build/CMakeFiles/list_install_components.dir
+/home/hzy/geant4_workdir/Rn_s/build/CMakeFiles/rebuild_cache.dir
+/home/hzy/geant4_workdir/Rn_s/build/CMakeFiles/edit_cache.dir
+/home/hzy/geant4_workdir/Rn_s/build/CMakeFiles/exampleN01.dir

@@ -1,0 +1,275 @@
+//
+// ********************************************************************
+// * License and Disclaimer                                           *
+// *                                                                  *
+// * The  Geant4 software  is  copyright of the Copyright Holders  of *
+// * the Geant4 Collaboration.  It is provided  under  the terms  and *
+// * conditions of the Geant4 Software License,  included in the file *
+// * LICENSE and available at  http://cern.ch/geant4/license .  These *
+// * include a list of copyright holders.                             *
+// *                                                                  *
+// * Neither the authors of this software system, nor their employing *
+// * institutes,nor the agencies providing financial support for this *
+// * work  make  any representation or  warranty, express or implied, *
+// * regarding  this  software system or assume any liability for its *
+// * use.  Please see the license in the file  LICENSE  and URL above *
+// * for the full disclaimer and the limitation of liability.         *
+// *                                                                  *
+// * This  code  implementation is the result of  the  scientific and *
+// * technical work of the GEANT4 collaboration.                      *
+// * By using,  copying,  modifying or  distributing the software (or *
+// * any work based  on the software)  you  agree  to acknowledge its *
+// * use  in  resulting  scientific  publications,  and indicate your *
+// * acceptance of all terms of the Geant4 Software license.          *
+// ********************************************************************
+//
+//
+// $Id$
+//
+#include "G4RotationMatrix.hh"
+#include "G4Transform3D.hh"
+#include "ExN01DetectorConstruction.hh"
+#include "G4NistManager.hh"
+#include "G4Material.hh"
+#include "G4Box.hh"
+#include "G4Tubs.hh"
+#include "G4LogicalVolume.hh"
+#include "G4ThreeVector.hh"
+#include "G4PVPlacement.hh"
+#include "globals.hh"
+#include "G4SystemOfUnits.hh"
+#include "G4UnionSolid.hh"
+#include "ExN01TrackerSD.hh"
+#include "G4SDManager.hh"
+#include "G4OpticalSurface.hh"
+#include "G4LogicalBorderSurface.hh"
+
+ExN01DetectorConstruction::ExN01DetectorConstruction()
+ :  experimentalHall_log(0), tracker_log(0),
+    calorimeterBlock_log(0), calorimeterLayer_log(0),
+    experimentalHall_phys(0), calorimeterLayer_phys(0),
+    calorimeterBlock_phys(0), tracker_phys(0)
+{;}
+
+ExN01DetectorConstruction::~ExN01DetectorConstruction()
+{
+}
+
+G4VPhysicalVolume* ExN01DetectorConstruction::Construct()
+{
+  //Air
+  G4double a, z, density;
+  G4int nelements;
+  G4Ni
+
+  G4Element* N = new G4Element("Nitrogen", "N", z=7 , a=14.01*g/mole);
+  G4Element* O = new G4Element("Oxygen"  , "O", z=8 , a=16.00*g/mole);
+
+  G4Material* air = new G4Material("Air", density=1.29*mg/cm3, nelements=2);
+  air->AddElement(N, 70.*perCent);
+  air->AddElement(O, 30.*perCent);
+  
+  //vacuum
+  G4Material *vacuum=G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
+  
+  const G4int nEntries = 32;
+  
+   G4double photonEnergy[nEntries] =
+            { 2.034*eV, 2.068*eV, 2.103*eV, 2.139*eV,
+              2.177*eV, 2.216*eV, 2.256*eV, 2.298*eV,
+              2.341*eV, 2.386*eV, 2.433*eV, 2.481*eV,
+              2.532*eV, 2.585*eV, 2.640*eV, 2.697*eV,
+              2.757*eV, 2.820*eV, 2.885*eV, 2.954*eV,
+              3.026*eV, 3.102*eV, 3.181*eV, 3.265*eV,
+              3.353*eV, 3.446*eV, 3.545*eV, 3.649*eV,
+              3.760*eV, 3.877*eV, 4.002*eV, 4.136*eV };
+//
+// 
+//
+  G4double refractiveIndex1[nEntries] =
+            { 1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,
+              1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,
+             1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,
+			1.0,1.0};
+  G4double absorption[nEntries] =
+           {3.448*m,  4.082*m,  6.329*m,  9.174*m, 12.346*m, 13.889*m,
+           15.152*m, 17.241*m, 18.868*m, 20.000*m, 26.316*m, 35.714*m,
+           45.455*m, 47.619*m, 52.632*m, 52.632*m, 55.556*m, 52.632*m,
+           52.632*m, 47.619*m, 45.455*m, 41.667*m, 37.037*m, 33.333*m,
+           30.000*m, 28.500*m, 27.000*m, 24.500*m, 22.000*m, 19.500*m,
+           17.500*m, 14.500*m };//光子在空气中的吸收长度?
+  G4double scintilFast[nEntries] =
+            { 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00,
+              1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00,
+              1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00,
+              1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00,
+              1.00, 1.00, 1.00, 1.00 };
+		
+  G4MaterialPropertiesTable* myMPT1 = new G4MaterialPropertiesTable();
+  myMPT1->AddProperty("refraction", photonEnergy, refractiveIndex1, nEntries);
+  myMPT1->AddProperty("FASTCOMPONENT", photonEnergy, scintilFast, nEntries);
+  myMPT1->AddProperty("ABSLENGTH",    photonEnergy, absorption,     nEntries);
+		
+	//这里的意义？	
+  myMPT1->AddConstProperty("SCINTILLATIONYIELD",50./MeV);
+  myMPT1->AddConstProperty("RESOLUTIONSCALE",1.0);
+  myMPT1->AddConstProperty("FASTTIMECONSTANT", 1.*ns);
+  myMPT1->AddConstProperty("YIELDRATIO",1);
+
+
+ air->SetMaterialPropertiesTable(myMPT1);
+  
+ 
+  
+  
+  //world
+//------------------------------------------------------ materials
+  G4double innerRadius=0*cm;
+  G4double outerRadius=10.0*cm;
+  G4double height=37.5*cm;
+  G4double PMTRadius=3.5*cm;
+  G4double PMTheight=0.06*cm;
+  G4double x,y,z1;
+   x=y=z1=50.0*cm;
+  G4Box* exphall_Box=new G4Box("exphall_Box",x,y,z1);
+  G4LogicalVolume* exphall_log=new G4LogicalVolume(exphall_Box,air,"exphall_log");
+  G4VPhysicalVolume* exphall_phys
+    = new G4PVPlacement(0,G4ThreeVector(0,0,0),exphall_log,"exphall_phys",0,false,0);
+  //Detect_cylinder
+  G4Tubs* Detect_exp = new G4Tubs("Detector_exp",innerRadius,outerRadius,height,0*deg,360*deg);
+
+  G4LogicalVolume* Detect_log
+    = new G4LogicalVolume(Detect_exp,air,"Detector_log");
+
+  G4VPhysicalVolume* Detect_phys
+    = new G4PVPlacement(0,G4ThreeVector(0,0,0),Detect_log,"Detector_phys",exphall_log,false,0);
+	
+//pmt1
+  G4Tubs* PMT1_exp=new G4Tubs("PMT1_exp",innerRadius,PMTRadius,PMTheight,0*deg,360*deg);
+  
+  G4LogicalVolume* PMT1_log
+    = new G4LogicalVolume(PMT1_exp,vacuum,"PMT1_log");
+	
+  G4VPhysicalVolume* PMT1_phys
+    = new G4PVPlacement(0,G4ThreeVector(0,0,37.56*cm),PMT1_log,"PMT1_phys",exphall_log,false,0);
+
+//PMT2
+  G4Tubs* PMT2_exp=new G4Tubs("PMT2_exp",innerRadius,PMTRadius,PMTheight,0*deg,360*deg);
+  
+  G4LogicalVolume* PMT2_log
+    = new G4LogicalVolume(PMT2_exp,vacuum,"PMT1_log");
+	
+  G4VPhysicalVolume* PMT2_phys
+    = new G4PVPlacement(0,G4ThreeVector(0,0,-37.56*cm),PMT2_log,"PMT2_phys",exphall_log,false,0);
+	
+//Teflon1
+  G4double thickness=0.02*cm;
+  G4double Teflonheight=0.01*cm;
+  G4double innerR1=PMTRadius;
+  G4double innerR2=outerRadius;
+  G4Tubs* Teflon1_exp=new G4Tubs("Teflon1_exp",innerR1,innerR2+thickness,Teflonheight,0*deg,360*deg);
+ 
+//Teflon2
+  G4Tubs* Teflon2_exp=new G4Tubs("Teflon2_exp",innerR1,innerR2+thickness,Teflonheight,0*deg,360*deg);
+  
+//Teflon&&Detector
+G4Tubs* Teflon3_exp=new G4Tubs("Teflon3_exp",outerRadius,outerRadius+thickness,height,0*deg,360*deg);
+
+//合并Teflon
+G4UnionSolid* TeflonTemp=new G4UnionSolid("Teflon1+Teflon2",Teflon1_exp,Teflon2_exp, G4Transform3D(G4RotationMatrix(),G4ThreeVector(0,0,75.2*cm)));//旋转矩阵如何设置？以及平移的标准？
+G4UnionSolid* Teflon_exp=new G4UnionSolid("Teflon_exp",TeflonTemp,Teflon3_exp,G4Transform3D(G4RotationMatrix(),G4ThreeVector()));
+G4LogicalVolume* Teflon_log=new G4LogicalVolume(Teflon_exp,vacuum,"Teflon_log");
+G4VPhysicalVolume* Teflon_phys
+    = new G4PVPlacement(0,G4ThreeVector(0,0,0),Teflon_log,"Teflon_phys",exphall_log,false,0);
+
+//photocathode1
+G4double photocathode_thickness=0.0005*mm;
+G4Tubs* photocathode1_exp=new G4Tubs("photocathode1_exp",innerRadius,PMTRadius,photocathode_thickness,0*deg,360*deg);
+G4LogicalVolume* photocathode1_log=new G4LogicalVolume(photocathode1_exp,vacuum,"photocathode1_log");
+G4VPhysicalVolume* photocathode1_phys
+    = new G4PVPlacement(0,G4ThreeVector(0,0,375.205*mm),photocathode1_log,"photocathode1_phys",exphall_log,false,0);
+
+//photocathode2
+G4Tubs* photocathode2_exp=new G4Tubs("photocathode2_exp",innerRadius,PMTRadius,photocathode_thickness,0*deg,360*deg);
+G4LogicalVolume* photocathode2_log=new G4LogicalVolume(photocathode2_exp,vacuum,"photocathode2_log");
+G4VPhysicalVolume* photocathode2_phys
+    = new G4PVPlacement(0,G4ThreeVector(0,0,-375.205*mm),photocathode2_log,"photocathode2_phys",exphall_log,false,0);
+
+	
+	
+//create optical surface
+  G4OpticalSurface* tube_Surface = new G4OpticalSurface("detector_surface");
+  tube_Surface->SetType(dielectric_dielectric);
+  tube_Surface->SetFinish(polished);
+  tube_Surface->SetModel(unified);
+  
+
+//create_border
+  G4OpticalSurface* DetectBorder=new G4OpticalSurface("PMTWindow&Detector_surface");
+  DetectBorder->SetType(dielectric_dielectric);//???
+  DetectBorder->SetFinish(polished);
+  DetectBorder->SetModel(unified);
+  
+//create detect surface
+  G4OpticalSurface* Detect=new G4OpticalSurface("detect_surface");
+  Detect->SetType(dielectric_metal);
+  Detect->SetFinish(polished);
+  Detect->SetModel(unified);
+  
+//PMT1&detect_surface  
+  new G4LogicalBorderSurface("border_surface1",
+                                 Detect_phys,PMT1_phys,DetectBorder);
+//PMT2$detect surface
+  
+  new G4LogicalBorderSurface("border_surface2",
+                                 Detect_phys,PMT2_phys,DetectBorder);
+	
+//detector_coated	
+  new G4LogicalBorderSurface("Detector_coated",
+                                 Detect_phys,Teflon_phys,tube_Surface);
+								 
+//photocathode_bottom
+  new G4LogicalBorderSurface("Detector_coated",
+                                 PMT1_phys,photocathode1_phys,Detect);
+  new G4LogicalBorderSurface("Detector_coated",
+                                 PMT2_phys,photocathode2_phys,Detect);
+
+
+ // Generate & Add Material Properties Table attached to the optical surfaces
+ 
+ //量子效率的面是否应该是PMT的探测面？所以完全透射的面如何设置？
+ const G4int num = 2;
+  G4double ephoton[num] = {2.034*eV, 4.136*eV};
+  G4double reflectivity1[num] = {0.97, 0.97};
+  G4double reflectivity2[num]={0,0};
+  G4double efficiency[num]   = {0.3, 0.3};
+  
+  G4MaterialPropertiesTable *myST1 = new G4MaterialPropertiesTable();
+  G4MaterialPropertiesTable *myST2 = new G4MaterialPropertiesTable();
+  G4MaterialPropertiesTable *myST3= new G4MaterialPropertiesTable();
+  
+  myST1->AddProperty("tubeREFLECTIVITY", ephoton, reflectivity1, num);
+  myST2->AddProperty("REFLECTIVITY", ephoton, reflectivity2, num);
+  myST2->AddProperty("qefficiency", ephoton, efficiency, num);
+  myST3->AddProperty("boarderreflectivity", ephoton, reflectivity2, num);
+ 
+  
+
+  tube_Surface->SetMaterialPropertiesTable(myST1);
+  Detect->SetMaterialPropertiesTable(myST2);
+  DetectBorder->SetMaterialPropertiesTable(myST3);
+  
+  //SD
+G4SDManager* SDman = G4SDManager::GetSDMpointer();
+  //EJ-200
+	G4String trackerSDname = "/mydet/tracker";
+	ExN01TrackerSD * trackerSD = new ExN01TrackerSD(trackerSDname);
+	SDman->AddNewDetector(trackerSD);
+	Detect_log->SetSensitiveDetector(trackerSD);
+
+
+  //------------------------------------------------------------------
+
+  return exphall_phys;
+}
+

@@ -1,0 +1,130 @@
+//
+// ********************************************************************
+// * License and Disclaimer                                           *
+// *                                                                  *
+// * The  Geant4 software  is  copyright of the Copyright Holders  of *
+// * the Geant4 Collaboration.  It is provided  under  the terms  and *
+// * conditions of the Geant4 Software License,  included in the file *
+// * LICENSE and available at  http://cern.ch/geant4/license .  These *
+// * include a list of copyright holders.                             *
+// *                                                                  *
+// * Neither the authors of this software system, nor their employing *
+// * institutes,nor the agencies providing financial support for this *
+// * work  make  any representation or  warranty, express or implied, *
+// * regarding  this  software system or assume any liability for its *
+// * use.  Please see the license in the file  LICENSE  and URL above *
+// * for the full disclaimer and the limitation of liability.         *
+// *                                                                  *
+// * This  code  implementation is the result of  the  scientific and *
+// * technical work of the GEANT4 collaboration.                      *
+// * By using,  copying,  modifying or  distributing the software (or *
+// * any work based  on the software)  you  agree  to acknowledge its *
+// * use  in  resulting  scientific  publications,  and indicate your *
+// * acceptance of all terms of the Geant4 Software license.          *
+// ********************************************************************
+//
+// $Id: ExN01SteppingAction.cc 71007 2013-06-09 16:14:59Z maire $
+//
+/// \file ExN01SteppingAction.cc
+/// \brief Implementation of the ExN01SteppingAction class
+
+#include "ExN01SteppingAction.hh"
+
+#include "G4Step.hh"
+#include "G4Track.hh"
+#include "G4OpticalPhoton.hh"
+
+//#include "G4Event.hh"
+#include "G4RunManager.hh"
+#include "G4SteppingManager.hh"
+#include "G4SDManager.hh"
+#include "G4EventManager.hh"
+#include "G4ProcessManager.hh"
+#include "G4Track.hh"
+#include "G4Step.hh"
+#include "G4Event.hh"
+#include "G4StepPoint.hh"
+#include "G4TrackStatus.hh"
+#include "G4VPhysicalVolume.hh"
+#include "G4ParticleDefinition.hh"
+#include "G4ParticleTypes.hh"
+//#include "G4OpBoundaryProcess.hh"
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+
+ExN01SteppingAction::ExN01SteppingAction()
+: G4UserSteppingAction()
+{ 
+  fScintillationCounter = 0;
+  fCerenkovCounter      = 0;
+  fEventNumber = -1;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+ExN01SteppingAction::~ExN01SteppingAction()
+{ ; }
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+void ExN01SteppingAction::UserSteppingAction(const G4Step* theStep)
+{
+  G4StepPoint* thePostPoint = theStep->GetPostStepPoint();
+  G4VPhysicalVolume* thePostPV = thePostPoint->GetPhysicalVolume();
+  G4int eventNumber = G4RunManager::GetRunManager()->
+                                              GetCurrentEvent()->GetEventID();
+
+  if (eventNumber != fEventNumber) {
+     G4cout << " Number of Scintillation Photons in previous event: "
+            << fScintillationCounter << G4endl;
+     G4cout << " Number of Cerenkov Photons in previous event: "
+            << fCerenkovCounter << G4endl;
+     fEventNumber = eventNumber;
+     fScintillationCounter = 0;
+     fCerenkovCounter = 0;
+  }
+
+  G4Track* track = theStep->GetTrack();
+
+  G4String ParticleName = track->GetDynamicParticle()->
+                                 GetParticleDefinition()->GetParticleName();
+
+  if (ParticleName == "opticalphoton") return;
+
+  const std::vector<const G4Track*>* secondaries =
+                                            theStep->GetSecondaryInCurrentStep();
+
+  if (secondaries->size()>0) {
+     for(unsigned int i=0; i<secondaries->size(); ++i) {
+        if (secondaries->at(i)->GetParentID()>0) {
+           if(secondaries->at(i)->GetDynamicParticle()->GetParticleDefinition()
+               == G4OpticalPhoton::OpticalPhotonDefinition()){
+              if (secondaries->at(i)->GetCreatorProcess()->GetProcessName()
+               == "Scintillation")fScintillationCounter++;
+              if (secondaries->at(i)->GetCreatorProcess()->GetProcessName()
+               == "Cerenkov")fCerenkovCounter++;
+           }
+        }
+     }
+  }
+   G4OpBoundaryProcessStatus boundaryStatus =Undefined;
+   static G4ThreadLocal G4OpBoundaryProcess* boundary=NULL;
+
+   boundaryStatus =boundary->GetStatus();
+   if(thePostPoint->GetStepStatus()==fGeomBoundary){
+   switch(boundaryStatus){
+   case Detection:
+
+   {
+     if(thePostPV->GetName()=="photocathode1_exp"||thePostPV->GetName()=="photocathode2_exp")//2 photocathode?
+     {
+        fNum_Pmt++;
+        fTime_Pmt.push_back(time);
+     }
+    break;
+     }
+                         }
+                                                     }
+}
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
